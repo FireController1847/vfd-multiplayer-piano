@@ -31,6 +31,22 @@ function handleData(ws, data) {
     });
   }
 }
+function setupWSEvents(ws) {
+  ws.on("message", raw => {
+    let d;
+    try {
+      d = JSON.parse(raw);
+    } catch(e) { return "Invalid Request"; }
+    if (!Array.isArray(d)) return handleData(ws, d);
+    for (let i = 0; i < d.length; i++) {
+      handleData(ws, d);
+    }
+    return;
+  });
+  ws.on("close", () => {
+    ws.log("Connection Closed");
+  });
+}
 // Broken Connections
 function noop() {}
 function heartbeat() {
