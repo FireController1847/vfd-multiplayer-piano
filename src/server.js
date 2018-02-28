@@ -3,6 +3,19 @@ const WebSocket = require('ws');
 // Make Server
 const wss = new WebSocket.Server({ port: 8080 });
 const users = new Map();
+const channels = new Map();
+// Force Lobby
+channels.push({
+  _id: 'lobby',
+  settings: {
+    chat: true,
+    color: '#FFFFFF',
+    crownsolo: false,
+    lobby: true,
+    visible: true
+  },
+  ppl: {}
+})
 // Events
 let nextId = 0;
 wss.on('connection', (ws, req) => {
@@ -42,6 +55,15 @@ function handleData(ws, data) {
       m: 't',
       t: Date.now(),
       e: Date.now() - data.e
+    }]);
+  }
+  if (data.m == "ch") {
+    const channel = channels.get(data._id);
+    if (!channel) return;
+    channel.ppl[ws.id] = users.get(ws.id);
+    return ws.sendData([{
+      m: 'ch',
+      ch: channel
     }]);
   }
 }
