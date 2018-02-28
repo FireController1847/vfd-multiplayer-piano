@@ -22,6 +22,7 @@ wss.on('connection', (ws, req) => {
 function handleData(ws, data) {
   if (!data.hasOwnProperty("m")) return;
   if (data.m == "hi") {
+    console.log("hi");
     return ws.sendData({
       m: 'hi',
       u: {
