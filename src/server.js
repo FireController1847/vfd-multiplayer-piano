@@ -32,7 +32,7 @@ function handleData(ws, data) {
       }
     };
     console.log(data);
-    return ws.sendData(data);
+    return ws.sendData([data]);
   }
 }
 function setupWSEvents(ws) {
