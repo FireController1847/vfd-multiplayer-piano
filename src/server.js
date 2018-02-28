@@ -5,7 +5,7 @@ const wss = new WebSocket.Server({ port: 8080 });
 const users = new Map();
 const channels = new Map();
 // Force Lobby
-channels.push({
+channels.set('lobby', {
   _id: 'lobby',
   settings: {
     chat: true,
