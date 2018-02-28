@@ -23,14 +23,16 @@ function handleData(ws, data) {
   if (!data.hasOwnProperty("m")) return;
   if (data.m == "hi") {
     console.log("hi");
-    return ws.sendData({
+    const data = {
       m: 'hi',
       u: {
         _id: ws.id,
         name: 'Anonymous',
         color: '#FFFFFF'
       }
-    });
+    };
+    console.log(data);
+    return ws.sendData(data);
   }
 }
 function setupWSEvents(ws) {
