@@ -18,5 +18,8 @@
   "homepage": "https://github.com/FireController1847/multiplayer-piano-server#readme",
   "dependencies": {
     "ws": "^4.1.0"
+  },
+  "devDependencies": {
+    "sha1": "^1.1.1"
   }
 }

@@ -1,21 +1,42 @@
 // Modules
 const WebSocket = require('ws');
+const sha1 = require("sha1");
+const fs = require("fs");
 // Make Server
 const wss = new WebSocket.Server({ port: 8080 });
-const users = new Map();
-const channels = new Map();
-// Force Lobby
-channels.set('lobby', {
-  _id: 'lobby',
-  settings: {
-    chat: true,
-    color: '#FFFFFF',
-    crownsolo: false,
-    lobby: true,
-    visible: true
-  },
-  ppl: {}
-})
+// Database
+const clients = {};
+// Classes
+class Client {
+  constructor(hash, color, name) {
+    this.color = color;
+    this.name = name;
+    this._id = hash;
+  }
+  setName(n) {
+    this.name = n;
+  }
+  setColor(c) {
+    this.color = c;
+  }
+}
+class Room {
+  constructor(name, count, settings) {
+    this.count = count;
+    this._id = name;
+    const isLobby = name.toLowerCase().includes('lobby');
+    this.settings = {
+      chat: isLobby ? true : (settings.chat != null ? settings.chat : true),
+      color: isLobby ? "#3b5054" : (settings.color != null ? settings.color : "#3b5054"),
+      crownsolo: isLobby ? false : (settings.crownsolo != null ? settings.crownsolo : false),
+      lobby: isLobby,
+      visible: isLobby ? true : (settings.visible != null ? settings.visible : true)
+    };
+    this.ppl = {};
+  }
+}
+// Variables
+const rooms = new Map();
 // Events
 let nextId = 0;
 wss.on('connection', (ws, req) => {
@@ -31,40 +52,64 @@ wss.on('connection', (ws, req) => {
     return Function.prototype.bind.call(console.log, console, `WS ${ws.id}:`);
   };
   setupWSEvents(ws);
-  users.set(ws.id, ws);
   console.log(`New Connection. WebSocket Assigned ID: ${ws.id}`);
 });
+function generateUser(ws) {
+  const client = {
+    _id: sha1(ws.ip).substring(0, 20),
+    name: 'Anonymous',
+    color: '#' + Math.floor(Math.random()*16777215).toString(16)
+  };
+  // Search for client
+  const users = JSON.parse(fs.readFileSync('./users.json'));
+  if (users[client._id]) {
+    // user found!
+    client.name = users[client._id].name;
+    client.color = users[client._id].color;
+  }
+  clients[ws.ip] = new Client(client._id, client.color, client.name);
+  users[client._id] = client;
+  fs.writeFileSync('./users.json', JSON.stringify(users));
+  return clients[ws.ip];
+}
+function generateRoom(ws, data) {
+  const room = new Room(data._id, 0, data.set);
+  const roomCli = {
+    count: room.count,
+    settings: room.settings,
+    _id: room._id
+  }
+  rooms.set(room._id, room);
+  return roomCli;
+}
 function handleData(ws, data) {
   if (!data.hasOwnProperty("m")) return;
   if (data.m == "hi") {
     return ws.sendData([{
       m: 'hi',
-      u: {
-        _id: ws.id,
-        name: 'Anonymous',
-        color: '#FFFFFF'
-      },
+      u: generateUser(ws),
       t: Date.now()
     }]);
   }
-  if (data.m == "t") {
-    console.log('time');
-    console.log(Date.now() - data.e);
-    console.log(data.e - Date.now());
-    return ws.sendData([{
-      m: 't',
-      t: Date.now(),
-      e: Date.now() - data.e
-    }]);
-  }
   if (data.m == "ch") {
-    const channel = channels.get(data._id);
-    if (!channel) return;
-    channel.ppl[ws.id] = users.get(ws.id);
-    return ws.sendData([{
-      m: 'ch',
-      ch: channel
-    }]);
+    console.log(data);
+    const client = clients[ws.ip];
+    console.log(client);
+    if (!client) return;
+    const old = rooms.get(data._id);
+    if (!old) {
+      const room = generateRoom(ws, data);
+      return ws.sendData([{
+        m: 'ch',
+        ch: room,
+        ppl: [{
+          id: client._id,
+          name: client.name,
+          color: client.color,
+          _id: client._id
+        }]
+      }]);
+    }
   }
 }
 function setupWSEvents(ws) {
