@@ -2,6 +2,7 @@
 const WebSocket = require('ws');
 // Make Server
 const wss = new WebSocket.Server({ port: 8080 });
+const users = new Map();
 // Events
 let nextId = 0;
 wss.on('connection', (ws, req) => {
@@ -17,28 +18,35 @@ wss.on('connection', (ws, req) => {
     return Function.prototype.bind.call(console.log, console, `WS ${ws.id}:`);
   };
   setupWSEvents(ws);
+  users.set(ws.id, ws);
   console.log(`New Connection. WebSocket Assigned ID: ${ws.id}`);
 });
 function handleData(ws, data) {
   if (!data.hasOwnProperty("m")) return;
   if (data.m == "hi") {
-    console.log("hi");
-    const data = {
+    return ws.sendData([{
       m: 'hi',
       u: {
         _id: ws.id,
         name: 'Anonymous',
         color: '#FFFFFF'
-      }
-    };
-    console.log(data);
-    return ws.sendData([data]);
+      },
+      t: Date.now()
+    }]);
+  }
+  if (data.m == "t") {
+    console.log('time');
+    console.log(Date.now() - data.e);
+    console.log(data.e - Date.now());
+    return ws.sendData([{
+      m: 't',
+      t: Date.now(),
+      e: Date.now() - data.e
+    }]);
   }
 }
 function setupWSEvents(ws) {
   ws.on("message", raw => {
-    console.log('new message');
-    console.log(raw);
     let d;
     try {
       d = JSON.parse(raw);
