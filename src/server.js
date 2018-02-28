@@ -43,7 +43,7 @@ function setupWSEvents(ws) {
     } catch(e) { return "Invalid Request"; }
     if (!Array.isArray(d)) return handleData(ws, d);
     for (let i = 0; i < d.length; i++) {
-      handleData(ws, d);
+      handleData(ws, d[i]);
     }
     return;
   });
