@@ -6,6 +6,7 @@ const wss = new WebSocket.Server({ port: 8080 });
 let nextId = 0;
 wss.on('connection', (ws, req) => {
   pingConnection(ws);
+  ws.id = nextId;
   ws.ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
   nextId++;
   handleErrors(ws);
