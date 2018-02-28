@@ -35,6 +35,8 @@ function handleData(ws, data) {
 }
 function setupWSEvents(ws) {
   ws.on("message", raw => {
+    console.log('new message');
+    console.log(raw);
     let d;
     try {
       d = JSON.parse(raw);
