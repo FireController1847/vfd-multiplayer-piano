@@ -1,10 +1,12 @@
 // Modules
 const { EventEmitter } = require('events');
+const { WebhookClient } = require('discord.js');
 const WebSocket = require('ws');
 const sha1 = require("sha1");
 const fs = require("fs");
 // Make Server
 const wss = new WebSocket.Server({ port: 8080 });
+const webhook = new WebhookClient("418653029546328064", "EhMWO3en6RjzRbGL-RkZfPfaFYxaN0XEumi7eRJKqZ60pDIDk1WzoKdxD6Xolkd25hOw");
 // Database
 const participantsUtil = {};
 // Classes
@@ -201,6 +203,9 @@ function handleData(ws, data) {
       a: data.message
     };
     room.chat.insert(chatobj);
+    try {
+      webhook.send(`\`${part._id.substring(0, 5)}\` **${part.name}:**  ${chatobj.a}`);
+    } catch (e) {}
     return broadcast([chatobj]);
   }
   if (data.m == "n") {
