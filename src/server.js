@@ -1,17 +1,28 @@
 // Modules
+const { EventEmitter } = require('events');
 const WebSocket = require('ws');
 const sha1 = require("sha1");
 const fs = require("fs");
 // Make Server
 const wss = new WebSocket.Server({ port: 8080 });
 // Database
-const clients = {};
+const participantsUtil = {};
 // Classes
-class Client {
+class Chat {
+  constructor() {
+    this.messages = [];
+  }
+  insert(msg) {
+    this.messages.unshift(msg);
+    if (this.messages.length > 500) this.messages.length = 500;
+  }
+}
+class Participant {
   constructor(hash, color, name) {
     this.color = color;
     this.name = name;
     this._id = hash;
+    this.room = null;
   }
   setName(n) {
     this.name = n;
@@ -19,9 +30,14 @@ class Client {
   setColor(c) {
     this.color = c;
   }
+  setRoom(r) {
+    this.room = r;
+  }
 }
-class Room {
+class Room extends EventEmitter {
   constructor(name, count, settings) {
+    super();
+    if (!settings) settings = {};
     this.count = count;
     this._id = name;
     const isLobby = name.toLowerCase().includes('lobby');
@@ -32,7 +48,52 @@ class Room {
       lobby: isLobby,
       visible: isLobby ? true : (settings.visible != null ? settings.visible : true)
     };
-    this.ppl = {};
+    this.ppl = [];
+    this.chat = new Chat();
+  }
+  findParticipant(_id) {
+    return this.ppl.find(p => p._id == _id);
+  }
+  removeParticipant(p, _id) {
+    this.ppl = this.ppl.filter(p => p._id != _id);
+  }
+  connect(part) {
+    this.count++;
+    const partR = {
+      id: sha1(Date.now()).substring(0, 20),
+      name: part.name,
+      color: part.color,
+      _id: part._id
+    };
+    this.ppl.push(partR);
+    broadcast([{
+      m: 'p',
+      color: part.color,
+      displayX: 150,
+      displayY: 50,
+      id: partR.id,
+      name: part.name,
+      x: 0,
+      y: 0,
+      _id: part._id
+    }]);
+  }
+  disconnect(_id) {
+    const p = this.findParticipant(_id);
+    this.removeParticipant(p, _id);
+    broadcast([{
+      m: 'bye',
+      p: p.id
+    }]);
+  }
+  broadcast(data, ignore) {
+    if (!ignore) ignore = [];
+    wss.clients.forEach(ws => {
+      const part = this.findParticipant(ws._id);
+      if (!part) return;
+      if (ignore.includes(ws._id)) return;
+      ws.sendData(data);
+    });
   }
 }
 // Variables
@@ -45,72 +106,136 @@ wss.on('connection', (ws, req) => {
   ws.ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
   nextId++;
   handleErrors(ws);
-  ws.sendData = data => {
-    ws.send(JSON.stringify(data));
+  ws.sendData = (data, cb) => {
+    ws.send(JSON.stringify(data), cb);
   };
   ws.log = () => {
     return Function.prototype.bind.call(console.log, console, `WS ${ws.id}:`);
   };
+  ws.broadcast = broadcast;
   setupWSEvents(ws);
   console.log(`New Connection. WebSocket Assigned ID: ${ws.id}`);
 });
-function generateUser(ws) {
-  const client = {
+function broadcast(data, ignore) {
+  if (!ignore) ignore = [];
+  wss.clients.forEach(ws => {
+    if (ignore.includes(ws._id)) return;
+    ws.sendData(data);
+  });
+}
+function generateParticipant(ws) {
+  const part = {
     _id: sha1(ws.ip).substring(0, 20),
     name: 'Anonymous',
     color: '#' + Math.floor(Math.random()*16777215).toString(16)
   };
+  ws._id = part._id;
   // Search for client
-  const users = JSON.parse(fs.readFileSync('./users.json'));
-  if (users[client._id]) {
-    // user found!
-    client.name = users[client._id].name;
-    client.color = users[client._id].color;
-  }
-  clients[ws.ip] = new Client(client._id, client.color, client.name);
-  users[client._id] = client;
-  fs.writeFileSync('./users.json', JSON.stringify(users));
-  return clients[ws.ip];
+  try {
+    const participants = JSON.parse(fs.readFileSync('./participants.json'));
+    if (participants[part._id]) {
+      // user found!
+      part.name = participants[part._id].name;
+      part.color = participants[part._id].color;
+    } else {
+      participants[part._id] = part;
+      fs.writeFileSync('./participants.json', JSON.stringify(participants));
+    }
+  } catch (e) {}
+  participantsUtil[part._id] = new Participant(part._id, part.color, part.name);
+  return participantsUtil[part._id];
 }
-function generateRoom(ws, data) {
+function generateRoom(ws, data, part) {
   const room = new Room(data._id, 0, data.set);
-  const roomCli = {
-    count: room.count,
-    settings: room.settings,
-    _id: room._id
-  }
+  room.connect(part);
   rooms.set(room._id, room);
-  return roomCli;
+  return room;
 }
 function handleData(ws, data) {
   if (!data.hasOwnProperty("m")) return;
   if (data.m == "hi") {
     return ws.sendData([{
       m: 'hi',
-      u: generateUser(ws),
+      u: generateParticipant(ws),
       t: Date.now()
     }]);
   }
   if (data.m == "ch") {
-    console.log(data);
-    const client = clients[ws.ip];
-    console.log(client);
-    if (!client) return;
-    const old = rooms.get(data._id);
-    if (!old) {
-      const room = generateRoom(ws, data);
-      return ws.sendData([{
-        m: 'ch',
-        ch: room,
-        ppl: [{
-          id: client._id,
-          name: client.name,
-          color: client.color,
-          _id: client._id
-        }]
-      }]);
-    }
+    const part = participantsUtil[ws._id];
+    if (!part) return;
+    const old = rooms.get(part.room);
+    if (old) old.disconnect(part._id);
+    let room = rooms.get(data._id);
+    if (!room) room = generateRoom(ws, data, part);
+    else room.connect(part);
+    part.setRoom(room._id);
+    ws.sendData([{
+      m: 'c'
+    }], () => {
+      let chatobjs = [];
+      for (let i = 0; i < (room.chat.messages.length > 50 ? 50 : room.chat.messages.length); i++) {
+        chatobjs.unshift(room.chat.messages[i]);
+      }
+      return ws.sendData(chatobjs);
+    });
+    return ws.sendData([{
+      m: 'ch',
+      ch: {
+        count: room.count,
+        settings: room.settings,
+        _id: room._id
+      },
+      p: room.findParticipant(part._id).id,
+      ppl: (room.ppl.length > 0 ? room.ppl : null)
+    }]);
   }
+  if (data.m == "a") {
+    const part = participantsUtil[ws._id];
+    if (!part) return;
+    const room = rooms.get(part.room);
+    if (!room) return;
+    const partR = room.findParticipant(part._id);
+    const chatobj = {
+      m: "a",
+      p: partR,
+      a: data.message
+    };
+    room.chat.insert(chatobj);
+    return broadcast([chatobj]);
+  }
+  if (data.m == "n") {
+    const part = participantsUtil[ws._id];
+    if (!part) return;
+    const room = rooms.get(part.room);
+    if (!room) return;
+    const partR = room.findParticipant(part._id);
+    if (!partR) return;
+    room.broadcast([{
+      m: "n",
+      n: data.n,
+      p: partR.id,
+      t: data.t
+    }], [part._id]);
+  }
+  if (data.m == "t") {
+    const now = Date.now();
+    return ws.sendData([{
+      m: "t",
+      t: now,
+      echo: data.e - now
+    }]);
+  }
+}
+function handleClose(ws) {
+  const part = participantsUtil[ws._id];
+  if (part) {
+    delete participantsUtil[ws._id]
+  }
+  rooms.forEach(r => {
+    if (r.findParticipant(ws._id)) {
+      r.disconnect(ws._id);
+    }
+  });
 }
 function setupWSEvents(ws) {
   ws.on("message", raw => {
@@ -126,6 +251,7 @@ function setupWSEvents(ws) {
   });
   ws.on("close", () => {
     ws.log("Connection Closed");
+    handleClose(ws);
   });
 }
 // Broken Connections
@@ -148,6 +274,7 @@ const interval = setInterval(() => {
 function handleErrors(ws) {
   ws.on("error", e => {
     console.error(`WS ${ws.id}: Errored!\n`, e);
+    handleClose(ws);
   });
 }
 wss.on("error", console.error);

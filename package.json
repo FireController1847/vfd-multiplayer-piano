@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/FireController1847/multiplayer-piano-server#readme",
   "dependencies": {
+    "discord.js": "^11.3.0",
     "ws": "^4.1.0"
   },
   "devDependencies": {
