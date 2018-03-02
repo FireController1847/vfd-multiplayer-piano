@@ -33,6 +33,7 @@ class Server extends WebSocket.Server {
   // EVENT TIME!
   handleData(s, data) {
     if (!data.hasOwnProperty('m')) return;
+    console.log(data);
     if (data.m == 'hi') {
       const p = this.newParticipant(s);
       return s.sendObject({
