@@ -12,7 +12,9 @@ class Socket extends EventEmitter {
     console.log('1');
     this.server = server;
     this.ws = ws;
+    console.log(`WS: ${typeof this.ws}`);
     this.ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    console.log(this.ip);
     this.id = sha1(this.ip).substring(0, 20);
     this.debug('2');
     this.isAlive = true;
