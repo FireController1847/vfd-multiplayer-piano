@@ -9,12 +9,15 @@ class Socket extends EventEmitter {
    */
   constructor(server, ws, req) {
     super();
+    this.debug('1');
     this.server = server;
     this.ws = ws;
     this.ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     this.id = sha1(this.ip).substring(0, 20);
+    this.debug('2');
     this.isAlive = true;
     this.bindEvents();
+    this.debug('3');
     this.bindEventListeners();
     this.debug('New Socket Constructed');
   }
