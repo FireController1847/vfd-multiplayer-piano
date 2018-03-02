@@ -4,9 +4,38 @@ const { WebhookClient } = require('discord.js');
 const WebSocket = require('ws');
 const sha1 = require("sha1");
 const fs = require("fs");
+const readline = require("readline");
 // Make Server
 const wss = new WebSocket.Server({ port: 8080 });
-const webhook = new WebhookClient("418653029546328064", "EhMWO3en6RjzRbGL-RkZfPfaFYxaN0XEumi7eRJKqZ60pDIDk1WzoKdxD6Xolkd25hOw");
+const webhook = new WebhookClient("418653029546328064", "EhMWO3en6RjzRbGL-RkZfPfaFYxaN0XEumi7eRJKqZ60pDIDk1WzoKdxD6Xolkd25hOw", {disableEveryone: true});
+// Readline
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+rl.on('line', evt => {
+  if (evt.startsWith('setowner')) {
+    const id = evt.replace(/setowner /g, '');
+    try {
+      const participants = JSON.parse(fs.readFileSync("./participants.json"));
+      for (const key in participants) {
+        if (participants[key] && participants[key].name == "Sustain") {
+          delete participants[key];
+          participants[id] = {
+            _id: id,
+            name: 'Sustain',
+            color: '#47923d'
+          };
+        }
+      }
+      fs.writeFileSync('./participants.json', JSON.stringify(participants));
+      console.log(`NEW PARTICIPANTS: ${JSON.stringify(participants, null, 2)}`);
+      return;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+});
 // Database
 const participantsUtil = {};
 // Classes
@@ -109,6 +138,7 @@ wss.on('connection', (ws, req) => {
   nextId++;
   handleErrors(ws);
   ws.sendData = (data, cb) => {
+    if (ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify(data), cb);
   };
   ws.log = () => {
