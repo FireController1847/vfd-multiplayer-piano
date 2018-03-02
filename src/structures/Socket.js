@@ -16,6 +16,7 @@ class Socket extends EventEmitter {
     this.isAlive = true;
     this.bindEvents();
     this.bindEventListeners();
+    this.debug('New Socket Constructed');
   }
   bindEvents() {
     this.ws.eventNames().forEach(event => {
