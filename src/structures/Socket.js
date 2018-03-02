@@ -20,7 +20,9 @@ class Socket extends EventEmitter {
     this.debug('New Socket Constructed');
   }
   bindEvents() {
+    console.log(this.ws.eventNames());
     this.ws.eventNames().forEach(event => {
+      console.log(event);
       this.ws.on(event, (...args) => {
         this.emit(event, ...args);
       });
@@ -32,6 +34,7 @@ class Socket extends EventEmitter {
       this.close();
     });
     this.on('message', raw => {
+      console.log(raw);
       let d;
       try {
         d = JSON.parse(raw);
