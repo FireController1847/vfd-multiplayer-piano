@@ -9,7 +9,7 @@ class Socket extends EventEmitter {
    */
   constructor(server, ws, req) {
     super();
-    this.debug('1');
+    console.log('1');
     this.server = server;
     this.ws = ws;
     this.ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
