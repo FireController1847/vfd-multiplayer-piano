@@ -64,11 +64,11 @@ class Socket extends EventEmitter {
   sendObject(obj, cb) {
     this.sendArray([obj], cb);
   }
-  debug() {
-    return Function.prototype.bind.call(console.log, console, `[${this.id.substring(0, 5)}] `);
+  debug(args) {
+    console.log(`[${this.id.substring(0, 5)}] ${args}`);
   }
-  debugErr() {
-    return Function.prototype.bind.call(console.error, console, `[${this.id.substring(0, 5)}] `);
+  debugErr(args) {
+    console.error(`[${this.id.substring(0, 5)}] ${args}`);
   }
   close() {
     this.debug('Connection Closed');
