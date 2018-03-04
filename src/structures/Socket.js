@@ -32,7 +32,6 @@ class Socket extends EventEmitter {
       this.close();
     });
     this.on('message', raw => {
-      console.log(raw);
       let d;
       try {
         d = JSON.parse(raw);
@@ -69,6 +68,15 @@ class Socket extends EventEmitter {
   }
   close() {
     this.debug('Connection Closed');
+    const p = this.server.participants.get(this.id);
+    if (p) {
+      this.server.participants.delete(this.id);
+    }
+    this.server.rooms.forEach(r => {
+      if (r.findParticipant(this.id)) {
+        r.removeParticipant(this.id);
+      }
+    });
   }
   ping(noop) {
     return this.ws.ping(noop);
