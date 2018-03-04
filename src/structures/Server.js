@@ -86,7 +86,7 @@ class Server extends WebSocket.Server {
     if (data.m == 'a') {
       const p = this.getParticipant(s);
       if (!p) return;
-      const r = this.rooms.get(p.room);
+      const r = this.getRoom(p.room);
       if (!r) return;
       const pR = r.findParticipant(p._id);
       const msg = {
@@ -96,6 +96,27 @@ class Server extends WebSocket.Server {
       };
       r.chat.insert(msg);
       return this.broadcastTo(msg, r.ppl.map(tpR => tpR._id));
+    }
+    if (data.m == 'n') {
+      const p = this.getParticipant(s);
+      if (!p) return;
+      const r = this.getRoom(p.room);
+      if (!r) return;
+      const pR = r.findParticipant(p._id);
+      if (!pR) return;
+      return this.broadcastTo({
+        m: 'n',
+        n: data.n,
+        p: pR.id,
+        t: data.t
+      }, r.ppl.map(tpR => tpR._id), [p._id]);
+    }
+    if (data.m == 't') {
+      return s.sendObject({
+        m: 't',
+        t: Date.now(),
+        echo: data.e - Date.now()
+      });
     }
   }
   // Participants
