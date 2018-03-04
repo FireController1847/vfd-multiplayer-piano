@@ -1,5 +1,12 @@
 const fs = require('fs');
 
+/**
+ * TODO: Impliment a system in which users will get their
+ * user saved to MongoDB, and users who have not been seen
+ * within 7 days will get their userinfo deleted. Similar to how
+ * when your IP changes, you're a completely different user.
+ */
+
 class Participant {
   constructor(_id, name, color) {
     this._id = _id;
@@ -19,16 +26,17 @@ class Participant {
   }
   requestFile() {
     try {
-      return JSON.parse(fs.readFileSync('../database/participants.json'));
+      return JSON.parse(fs.readFileSync('./database/participants.json'));
     } catch (e) {
+      console.error('DB REQUEST FILE', e);
       return null;
     }
   }
   updateFile(raw) {
     try {
-      fs.writeFileSync('../database/participants.json', JSON.stringify(raw));
+      fs.writeFileSync('./database/participants.json', JSON.stringify(raw));
     } catch (e) {
-      // ...
+      console.error('DB UPDATE FILE', e);
     }
   }
   generateJSON() {
