@@ -132,6 +132,22 @@ class Server extends WebSocket.Server {
         y: data.y
       }, r.ppl.map(tpR => tpR._id), [p._id]);
     }
+    if (data.m == 'userset') {
+      const p = this.getParticipant(s);
+      if (!p) return;
+      p.updateUser(data.set.name);
+      const r = this.getRoom(p.room);
+      if (!r) return;
+      const pR = r.findParticipant(p._id);
+      if (!pR) return;
+      return this.broadcastTo({
+        m: 'p',
+        color: p.color,
+        id: pR.id,
+        name: p.name,
+        _id: p._id
+      }, this.ppl.map(tpR => tpR._id));
+    }
     if (data.m == 't') {
       return s.sendObject({
         m: 't',

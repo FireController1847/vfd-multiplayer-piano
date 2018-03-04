@@ -39,6 +39,14 @@ class Participant {
       console.error('DB UPDATE FILE', e);
     }
   }
+  updateUser(name, color) {
+    const pdb = this.requestFile();
+    if (!pdb) return;
+    this.name = name || this.name;
+    this.color = color || this.color;
+    pdb[this._id] = this.generateJSON();
+    this.updateFile(pdb);
+  }
   generateJSON() {
     return {
       _id: this._id,
