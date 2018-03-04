@@ -1,4 +1,5 @@
 const Participant = require('./Participant.js');
+const Room = require('./Room.js');
 const Socket = require('./Socket.js');
 const WebSocket = require('ws');
 
@@ -7,7 +8,8 @@ class Server extends WebSocket.Server {
     super({ port: 8080 });
     console.log('Server Launched');
     this.sockets = new Set();
-    this.participants = new Set();
+    this.participants = new Map();
+    this.rooms = new Map();
     this.bindEventListeners();
     // Broken Connections
     setInterval(() => {
@@ -30,25 +32,76 @@ class Server extends WebSocket.Server {
       else return s.sendObject(item);
     });
   }
+  broadcastTo(item, ppl) {
+    this.sockets.forEach(s => {
+      if (!ppl.includes(s.id)) return;
+      this.broadcast(item);
+    });
+  }
   // EVENT TIME!
   handleData(s, data) {
     if (!data.hasOwnProperty('m')) return;
     if (!['t', 'm'].includes(data.m)) console.log(data);
     if (data.m == 'hi') {
       const p = this.newParticipant(s);
-      console.log(p.generateJSON());
       return s.sendObject({
         m: 'hi',
         u: p.generateJSON(),
         t: Date.now()
       });
     }
+    if (data.m == 'ch') {
+      const p = this.getParticipant(s);
+      if (!p) return;
+      // Old Room
+      const old = this.getRoom(p.room);
+      if (old) old.disconnect(p._id);
+      // New Room
+      let r = this.getRoom(data._id);
+      if (!r) r = this.newRoom(s);
+      else r.newParticipant(p);
+      p.room = r._id;
+      // Clear Chat
+      s.sendObject({
+        m: 'c'
+      }, () => {
+        const chatobjs = [];
+        for (let i = 0; i < (r.chat.messages.length > 50 ? 50 : r.chat.messages.length); i++) {
+          chatobjs.unshift(r.chat.messages[i]);
+        }
+        return s.sendArray(chatobjs);
+      });
+      return s.sendObject({
+        m: 'ch',
+        ch: {
+          _id: r._id,
+          count: r.count,
+          settings: r.settings
+        },
+        p: r.findParticipant(p._id).id,
+        ppl: r.ppl.length > 0 ? r.ppl : null
+      });
+    }
   }
+  // Participants
   newParticipant(s) {
     const p = new Participant(s.id, 'Anonymous',
       `#${Math.floor(Math.random() * 16777215).toString(16)}`);
-    this.participants.add(p);
+    this.participants.add(s.id, p);
     return p;
+  }
+  getParticipant(s) {
+    return this.participants.get(s.id);
+  }
+  // Rooms
+  newRoom(data, p) {
+    const room = new Room(this, data._id, 0, data.set);
+    room.newParticipant(p);
+    this.rooms.set(room._id, room);
+    return room;
+  }
+  getRoom(id) {
+    return this.rooms.get(id);
   }
 }
 

@@ -12,7 +12,6 @@ class Socket extends EventEmitter {
     this.server = server;
     this.ws = ws;
     this.ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    console.log(this.ip);
     this.id = sha1(this.ip).substring(0, 20);
     this.isAlive = true;
     this.bindEvents();
@@ -22,8 +21,8 @@ class Socket extends EventEmitter {
   bindEvents() {
     const self = this;
     const oldEmit = this.ws.emit;
-    this.ws.emit = function() {
-      self.emit(arguments[0], arguments[1])
+    this.ws.emit = function onEmit() {
+      self.emit(arguments[0], arguments[1]);
       oldEmit.apply(self.ws, arguments);
     };
   }
