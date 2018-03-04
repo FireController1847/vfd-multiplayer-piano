@@ -4,7 +4,7 @@ const ParticipantRoom = require('./ParticipantRoom.js');
 const sha1 = require('sha1');
 
 class Room {
-  constructor(server, _id, count, settings = {}) {
+  constructor(p, server, _id, count, settings = {}) {
     this.server = server;
     this._id = _id;
     this.count = count;
@@ -26,6 +26,7 @@ class Room {
         visible: settings.visible != null ? settings.visible : true
       };
     }
+    this.crown = null;
     this.ppl = [];
     this.chat = new Chat();
   }
@@ -45,6 +46,7 @@ class Room {
       y: 0,
       _id: p._id
     }, this.ppl.map(tpR => tpR._id), [p._id]);
+    return pR;
   }
   findParticipant(_id) {
     return this.ppl.find(p => p._id == _id);
@@ -59,12 +61,24 @@ class Room {
       p: pR.id
     }, this.ppl.map(tpR => tpR._id));
   }
+  update(settings = {}) {
+    this.settings = Object.assign(this.settings, {
+      chat: settings.chat != null ? settings.chat : this.settings.chat,
+      color: settings.color || this.settings.color,
+      crownsolo: settings.crownsolo != null ? settings.crownsolo : this.settings.crownsolo,
+      visible: settings.visible != null ? settings.visible : this.settings.visible
+    });
+  }
   generateJSON() {
-    return {
+    const obj = {
       _id: this._id,
       settings: this.settings,
       count: this.count
     };
+    if (this.crown) {
+      obj.crown = this.crown;
+    }
+    return obj;
   }
 }
 

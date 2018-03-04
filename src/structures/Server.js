@@ -44,7 +44,7 @@ class Server extends WebSocket.Server {
   // EVENT TIME!
   handleData(s, data) {
     if (Array.isArray(data) || !data.hasOwnProperty('m')) return;
-    if (!['t', 'm', 'n'].includes(data.m)) console.log(data);
+    if (!['t', 'm', 'n', 'userset'].includes(data.m)) console.log(data);
     if (data.m == 'hi') {
       const p = this.newParticipant(s);
       return s.sendObject({
@@ -64,13 +64,19 @@ class Server extends WebSocket.Server {
       }
       // New Room
       let r = this.getRoom(data._id);
-      if (!r) {
-        r = this.newRoom(data, p);
-      } else {
-        const pR = r.findParticipant(p._id);
-        if (!pR) r.newParticipant(p);
-      }
+      if (!r) r = this.newRoom(data, p);
+      let pR = r.findParticipant(p._id);
+      if (!pR) pR = r.newParticipant(p);
       p.room = r._id;
+      console.log(pR);
+      if (!r.settings.lobby && pR) {
+        r.crown = {
+          participantId: pR.id,
+          userId: p.id,
+          time: new Date()
+        };
+        this.rooms.set(r._id, r);
+      }
       // Clear Chat
       s.sendObject({
         m: 'c'
@@ -83,14 +89,18 @@ class Server extends WebSocket.Server {
       });
       return s.sendObject({
         m: 'ch',
-        ch: {
-          _id: r._id,
-          count: r.count,
-          settings: r.settings
-        },
+        ch: r.generateJSON(),
         p: r.findParticipant(p._id).id,
         ppl: r.ppl.length > 0 ? r.ppl : null
       });
+    }
+    if (data.m == 'chset') {
+      const p = this.getParticipant(s);
+      if (!p) return;
+      const r = this.getRoom(p.room);
+      if (!r) return;
+      if (r.crown && r.crown.userId != p._id) return;
+      r.update(data.set);
     }
     if (data.m == 'a') {
       const p = this.getParticipant(s);
@@ -98,6 +108,11 @@ class Server extends WebSocket.Server {
       const r = this.getRoom(p.room);
       if (!r) return;
       const pR = r.findParticipant(p._id);
+      if (!data.message) return;
+      if (data.message.length > 255) {
+        data.message.length = 255;
+      }
+      data.message = data.message.replace(/\r?\n|\r/g, '');
       const msg = {
         m: 'a',
         p: pR.generateJSON(),
@@ -159,12 +174,15 @@ class Server extends WebSocket.Server {
     if (data.m == 'userset') {
       const p = this.getParticipant(s);
       if (!p) return;
+      if (data.set.name && data.set.name.length > 250) {
+        data.set.name = 'Invalid';
+      }
       p.updateUser(data.set.name);
       const r = this.getRoom(p.room);
       if (!r) return;
       const pR = r.findParticipant(p._id);
       if (!pR) return;
-      pR.updateUser(data.set.name);
+      pR.updateUser(data.set.name || 'Anonymous');
       return this.broadcastTo({
         m: 'p',
         color: p.color,
@@ -193,8 +211,7 @@ class Server extends WebSocket.Server {
   }
   // Rooms
   newRoom(data, p) {
-    const room = new Room(this, data._id, 0, data.set);
-    room.newParticipant(p);
+    const room = new Room(p, this, data._id, 0, data.set);
     this.rooms.set(room._id, room);
     return room;
   }
