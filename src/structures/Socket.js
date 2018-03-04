@@ -20,13 +20,12 @@ class Socket extends EventEmitter {
     this.debug('New Socket Constructed');
   }
   bindEvents() {
-    console.log(this.ws.eventNames());
-    this.ws.eventNames().forEach(event => {
-      console.log(event);
-      this.ws.on(event, (...args) => {
-        this.emit(event, ...args);
-      });
-    });
+    const self = this;
+    const oldEmit = this.ws.emit;
+    this.ws.emit = function() {
+      self.emit(arguments[0], arguments[1])
+      oldEmit.apply(self.ws, arguments);
+    };
   }
   bindEventListeners() {
     this.on('error', e => {

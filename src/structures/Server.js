@@ -33,9 +33,10 @@ class Server extends WebSocket.Server {
   // EVENT TIME!
   handleData(s, data) {
     if (!data.hasOwnProperty('m')) return;
-    console.log(data);
+    if (!['t', 'm'].includes(data.m)) console.log(data);
     if (data.m == 'hi') {
       const p = this.newParticipant(s);
+      console.log(p.generateJSON());
       return s.sendObject({
         m: 'hi',
         u: p.generateJSON(),
@@ -44,7 +45,7 @@ class Server extends WebSocket.Server {
     }
   }
   newParticipant(s) {
-    const p = new Participant(s._id, 'Anonymous',
+    const p = new Participant(s.id, 'Anonymous',
       `#${Math.floor(Math.random() * 16777215).toString(16)}`);
     this.participants.add(p);
     return p;
