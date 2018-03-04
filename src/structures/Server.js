@@ -1,7 +1,9 @@
 const Participant = require('./Participant.js');
 const Room = require('./Room.js');
 const Socket = require('./Socket.js');
+const { WebhookClient } = require('discord.js');
 const WebSocket = require('ws');
+const webhook = new WebhookClient('418653029546328064', 'EhMWO3en6RjzRbGL-RkZfPfaFYxaN0XEumi7eRJKqZ60pDIDk1WzoKdxD6Xolkd25hOw', { disableEveryone: true });
 
 class Server extends WebSocket.Server {
   constructor() {
@@ -95,6 +97,11 @@ class Server extends WebSocket.Server {
         a: data.message
       };
       r.chat.insert(msg);
+      try {
+        webhook.send(`\`${p._id.substring(0, 5)}\` **${p.name}:**  ${msg.a}`);
+      } catch (e) {
+        // ...
+      }
       return this.broadcastTo(msg, r.ppl.map(tpR => tpR._id));
     }
     if (data.m == 'n') {
@@ -109,6 +116,20 @@ class Server extends WebSocket.Server {
         n: data.n,
         p: pR.id,
         t: data.t
+      }, r.ppl.map(tpR => tpR._id), [p._id]);
+    }
+    if (data.m == 'm') {
+      const p = this.getParticipant(s);
+      if (!p) return;
+      const r = this.getRoom(p.room);
+      if (!r) return;
+      const pR = r.findParticipant(p._id);
+      if (!pR) return;
+      return this.broadcastTo({
+        m: 'm',
+        id: pR.id,
+        x: data.x,
+        y: data.y
       }, r.ppl.map(tpR => tpR._id), [p._id]);
     }
     if (data.m == 't') {

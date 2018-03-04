@@ -46,7 +46,7 @@ class Room {
       x: 0,
       y: 0,
       _id: p._id
-    }, this.ppl.map(tpR => tpR._id));
+    }, this.ppl.map(tpR => tpR._id), [p._id]);
   }
   findParticipant(_id) {
     return this.ppl.find(p => p._id == _id);
