@@ -4,7 +4,7 @@ const ParticipantRoom = require('./ParticipantRoom.js');
 const sha1 = require('sha1');
 
 class Room {
-  constructor(server, _id, count, settings) {
+  constructor(server, _id, count, settings = {}) {
     this.server = server;
     this._id = _id;
     this.count = count;
@@ -39,8 +39,6 @@ class Room {
     this.server.broadcastTo({
       m: 'p',
       color: p.color,
-      displayX: 0,
-      displayY: 0,
       id: pR.id,
       name: p.name,
       x: 0,
@@ -59,6 +57,13 @@ class Room {
       m: 'bye',
       p: pR.id
     }, this.ppl.map(tpR => tpR._id));
+  }
+  generateJSON() {
+    return {
+      _id: this._id,
+      settings: this.settings,
+      count: this.count
+    };
   }
 }
 

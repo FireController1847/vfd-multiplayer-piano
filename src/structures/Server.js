@@ -58,7 +58,7 @@ class Server extends WebSocket.Server {
       if (!p) return;
       // Old Room
       const old = this.getRoom(p.room);
-      if (old) old.disconnect(p._id);
+      if (old) old.removeParticipant(p._id);
       // New Room
       let r = this.getRoom(data._id);
       if (!r) r = this.newRoom(data, p);
@@ -131,6 +131,12 @@ class Server extends WebSocket.Server {
         x: data.x,
         y: data.y
       }, r.ppl.map(tpR => tpR._id), [p._id]);
+    }
+    if (data.m == '+ls') {
+      // ...
+    }
+    if (data.m == '-ls') {
+      // ...
     }
     if (data.m == 'userset') {
       const p = this.getParticipant(s);

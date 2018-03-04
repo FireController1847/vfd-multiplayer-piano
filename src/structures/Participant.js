@@ -13,6 +13,7 @@ class Participant {
     this.name = name;
     this.color = color;
     this.room = null;
+    this.updates = false;
 
     const pdb = this.requestFile();
     if (!pdb) return;
