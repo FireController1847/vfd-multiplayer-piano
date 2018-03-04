@@ -140,13 +140,14 @@ class Server extends WebSocket.Server {
       if (!r) return;
       const pR = r.findParticipant(p._id);
       if (!pR) return;
+      pR.updateUser(data.set.name);
       return this.broadcastTo({
         m: 'p',
         color: p.color,
         id: pR.id,
         name: p.name,
         _id: p._id
-      }, r.ppl.map(tpR => tpR._id));
+      }, r.ppl.map(tpR => tpR._id), [p._id]);
     }
     if (data.m == 't') {
       return s.sendObject({

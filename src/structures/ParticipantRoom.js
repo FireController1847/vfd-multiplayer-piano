@@ -5,6 +5,10 @@ class Participant {
     this.color = color;
     this._id = _id;
   }
+  updateUser(name, color) {
+    this.name = name || this.name;
+    this.color = color || this.color;
+  }
   generateJSON() {
     return {
       id: this.id,
