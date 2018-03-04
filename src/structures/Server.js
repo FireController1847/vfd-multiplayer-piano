@@ -133,6 +133,14 @@ class Server extends WebSocket.Server {
       }, r.ppl.map(tpR => tpR._id), [p._id]);
     }
     if (data.m == '+ls') {
+      const p = this.getParticipant(s);
+      if (!p) return;
+      p.updates = true;
+      return s.sendObject({
+        m: 'ls',
+        c: true,
+        u: this.rooms.map(r => r.generateJSON())
+      });
       // ...
     }
     if (data.m == '-ls') {
