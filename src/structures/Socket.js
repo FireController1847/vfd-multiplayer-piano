@@ -69,6 +69,11 @@ class Socket extends EventEmitter {
   close() {
     this.debug('Connection Closed');
     const p = this.server.participants.get(this.id);
+    let sExists = false;
+    this.server.sockets.forEach(s => {
+      if (s.id == this.id) sExists = true;
+    });
+    if (sExists) return;
     if (p) {
       this.server.participants.delete(this.id);
     }

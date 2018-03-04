@@ -58,11 +58,18 @@ class Server extends WebSocket.Server {
       if (!p) return;
       // Old Room
       const old = this.getRoom(p.room);
-      if (old) old.removeParticipant(p._id);
+      if (old) {
+        old.removeParticipant(p._id);
+        if (old.count <= 0) this.rooms.delete(p.room);
+      }
       // New Room
       let r = this.getRoom(data._id);
-      if (!r) r = this.newRoom(data, p);
-      else r.newParticipant(p);
+      if (!r) {
+        r = this.newRoom(data, p);
+      } else {
+        const pR = r.findParticipant(p._id);
+        if (!pR) r.newParticipant(p);
+      }
       p.room = r._id;
       // Clear Chat
       s.sendObject({
@@ -98,7 +105,7 @@ class Server extends WebSocket.Server {
       };
       r.chat.insert(msg);
       try {
-        webhook.send(`\`${p._id.substring(0, 5)}\` **${p.name}:**  ${msg.a}`);
+        if (r.settings.visible) webhook.send(`${r._id} - \`${p._id.substring(0, 5)}\` **${p.name}:**  ${msg.a}`);
       } catch (e) {
         // ...
       }
@@ -136,12 +143,15 @@ class Server extends WebSocket.Server {
       const p = this.getParticipant(s);
       if (!p) return;
       p.updates = true;
+      const keys = [];
+      this.rooms.forEach(r => {
+        if (r.settings.visible) keys.push(r.generateJSON());
+      });
       return s.sendObject({
         m: 'ls',
         c: true,
-        u: Object.keys(this.rooms).map(key => this.rooms.get(key).generateJSON())
+        u: keys
       });
-      // ...
     }
     if (data.m == '-ls') {
       // ...

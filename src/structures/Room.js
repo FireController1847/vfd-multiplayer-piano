@@ -52,6 +52,7 @@ class Room {
   removeParticipant(_id) {
     const pR = this.findParticipant(_id);
     if (!pR) return;
+    this.count--;
     this.ppl = this.ppl.filter(p => p._id != _id);
     this.server.broadcastTo({
       m: 'bye',

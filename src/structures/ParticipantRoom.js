@@ -1,4 +1,4 @@
-class Participant {
+class ParticipantRoom {
   constructor(id, name, color, _id) {
     this.id = id;
     this.name = name;
@@ -19,4 +19,4 @@ class Participant {
   }
 }
 
-module.exports = Participant;
+module.exports = ParticipantRoom;
