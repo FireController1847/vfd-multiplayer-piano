@@ -139,7 +139,7 @@ class Server extends WebSocket.Server {
       return s.sendObject({
         m: 'ls',
         c: true,
-        u: this.rooms.map(r => r.generateJSON())
+        u: Object.keys(this.rooms).map(key => this.rooms.get(key).generateJSON())
       });
       // ...
     }
