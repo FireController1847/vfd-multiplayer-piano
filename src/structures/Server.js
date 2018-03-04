@@ -147,7 +147,7 @@ class Server extends WebSocket.Server {
         id: pR.id,
         name: p.name,
         _id: p._id
-      }, r.ppl.map(tpR => tpR._id), [p._id]);
+      }, r.ppl.map(tpR => tpR._id));
     }
     if (data.m == 't') {
       return s.sendObject({
