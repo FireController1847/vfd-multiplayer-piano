@@ -88,6 +88,7 @@ table { border: 0; padding: 0; margin: 0; }
 
 #room .info.lobby { color: #eeffbb; }
 #room .info.black { color: #000; }
+#room .info.original { color: #fffb7b; }
 #room .info.not-visible { color: #ddeeff; }
 /* #room .info.crownsolo:after { content: url('/piano/crownsolo.png'); position: relative; top: 2px; margin-left: 4px; }
  #room .info.no-chat:after { content: url('/piano/no-chat.png'); position: relative; top: 2px; margin-left: 4px; } */

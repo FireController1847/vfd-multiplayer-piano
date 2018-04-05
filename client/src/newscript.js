@@ -2116,6 +2116,8 @@ $(function() {
     else info.removeClass("lobby");
     if (channel.settings.black) info.addClass("black");
     else info.removeClass("black");
+    if (channel.settings.original) info.addClass("original");
+    else info.removeClass("original");
     if (!channel.settings.chat) info.addClass("no-chat");
     else info.removeClass("no-chat");
     if (channel.settings.crownsolo) info.addClass("crownsolo");

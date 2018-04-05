@@ -13,14 +13,12 @@ class Room {
     this._id = _id;
     this.count = count;
     const isLobby = this._id.toLowerCase().includes('lobby');
-    settings.black = this._id.toLowerCase().includes('black');
     if (isLobby) {
       this.settings = {
         chat: true,
         color: bgColor,
         crownsolo: false,
         lobby: true,
-        black: false,
         visible: true
       };
     } else {
@@ -29,10 +27,12 @@ class Room {
         color: settings.color || bgColor,
         crownsolo: settings.crownsolo != null ? settings.crownsolo : false,
         lobby: false,
-        black: settings.black != null ? settings.black : false,
         visible: settings.visible != null ? settings.visible : true
       };
     }
+    settings.black = settings.lobby ? false : this._id.toLowerCase().includes('black');
+    // eslint-disable-next-line no-extra-parens
+    settings.original = !settings.black ? (!settings.lobby ? this._id.toLowerCase().includes('original') : false) : false;
     this.crown = null;
     this.ppl = [];
     this.chat = new Chat();
