@@ -50,12 +50,6 @@ class Server extends WebSocket.Server {
     if (!['t', 'm', 'n'].includes(data.m)) console.log(data);
     if (data.m == 'hi') {
       const p = this.newParticipant(s);
-      s.sendObject({
-        m: 'nq',
-        allowance: 200,
-        max: 600,
-        histLen: 0
-      });
       return s.sendObject({
         m: 'hi',
         u: p.generateJSON(),
@@ -77,7 +71,6 @@ class Server extends WebSocket.Server {
       let pR = r.findParticipant(p._id);
       if (!pR) pR = r.newParticipant(p);
       p.room = r._id;
-      console.log(pR);
       if (!r.settings.lobby && pR) {
         r.crown = {
           participantId: pR.id,
@@ -85,6 +78,23 @@ class Server extends WebSocket.Server {
           time: new Date()
         };
         this.rooms.set(r._id, r);
+      }
+      if (r._id.toLowerCase().includes('black')) {
+        // Send offline note quota because fuck it
+        s.sendObject({
+          m: 'nq',
+          allowance: 8000,
+          max: 24000,
+          histLen: 3
+        });
+      } else {
+        // Send lobby notequota until told otherwise
+        s.sendObject({
+          m: 'nq',
+          allowance: 200,
+          max: 600,
+          histLen: 0
+        });
       }
       // Clear Chat
       s.sendObject({

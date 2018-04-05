@@ -3,18 +3,24 @@ const Chat = require('./Chat.js');
 const ParticipantRoom = require('./ParticipantRoom.js');
 const sha1 = require('sha1');
 
+/**
+ * TODO: ONLY ALLOW ONE BLACK MIDI ROOM AT A TIME
+ */
+
 class Room {
   constructor(p, server, _id, count, settings = {}) {
     this.server = server;
     this._id = _id;
     this.count = count;
     const isLobby = this._id.toLowerCase().includes('lobby');
+    settings.black = this._id.toLowerCase().includes('black');
     if (isLobby) {
       this.settings = {
         chat: true,
         color: bgColor,
         crownsolo: false,
         lobby: true,
+        black: false,
         visible: true
       };
     } else {
@@ -23,6 +29,7 @@ class Room {
         color: settings.color || bgColor,
         crownsolo: settings.crownsolo != null ? settings.crownsolo : false,
         lobby: false,
+        black: settings.black != null ? settings.black : false,
         visible: settings.visible != null ? settings.visible : true
       };
     }

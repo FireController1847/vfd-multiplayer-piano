@@ -2113,6 +2113,8 @@ $(function() {
     info.text(channel._id);
     if (channel.settings.lobby) info.addClass("lobby");
     else info.removeClass("lobby");
+    if (channel.settings.black) info.addClass("black");
+    else info.removeClass("black");
     if (!channel.settings.chat) info.addClass("no-chat");
     else info.removeClass("no-chat");
     if (channel.settings.crownsolo) info.addClass("crownsolo");
@@ -2133,6 +2135,8 @@ $(function() {
       info.text(room._id + " (" + room.count + ")");
       if (room.settings.lobby) info.addClass("lobby");
       else info.removeClass("lobby");
+      if (room.settings.black) info.addClass("black");
+      else info.removeClass("black");
       if (!room.settings.chat) info.addClass("no-chat");
       else info.removeClass("no-chat");
       if (room.settings.crownsolo) info.addClass("crownsolo");
