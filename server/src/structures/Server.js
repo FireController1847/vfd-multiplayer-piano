@@ -47,7 +47,7 @@ class Server extends WebSocket.Server {
   // EVENT TIME!
   handleData(s, data) {
     if (Array.isArray(data) || !data.hasOwnProperty('m')) return;
-    if (!['t', 'm', 'n', 'userset'].includes(data.m)) console.log(data);
+    if (!['t', 'm', 'n'].includes(data.m)) console.log(data);
     if (data.m == 'hi') {
       const p = this.newParticipant(s);
       return s.sendObject({
@@ -179,7 +179,7 @@ class Server extends WebSocket.Server {
       const p = this.getParticipant(s);
       if (!p) return;
       if (data.set.name) {
-        if (data.set.name.length > 250 || !data.set.name) data.set.name = 'Invalid';
+        if (data.set.name.length > 250 || !data.set.name.replace(/\s/g, '')) data.set.name = 'Invalid';
         p.updateUser(this.removeTextHell(data.set.name));
       }
       const r = this.getRoom(p.room);
