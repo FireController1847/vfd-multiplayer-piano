@@ -1,4 +1,4 @@
-const bgColor = '#3b5054';
+const bgColor = '#206694';
 const Chat = require('./Chat.js');
 const ParticipantRoom = require('./ParticipantRoom.js');
 const sha1 = require('sha1');
