@@ -1,3 +1,4 @@
+const CLI = require('./CLI.js');
 const Participant = require('./Participant.js');
 const Room = require('./Room.js');
 const Socket = require('./Socket.js');
@@ -8,6 +9,7 @@ const WebSocket = require('ws');
 class Server extends WebSocket.Server {
   constructor() {
     super({ port: 8080 });
+    this.cli = new CLI(this);
     console.log('Server Launched');
     this.sockets = new Set();
     this.participants = new Map();

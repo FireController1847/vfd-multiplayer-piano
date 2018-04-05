@@ -1,14 +1,17 @@
 const readline = require('readline');
 
 class CLI {
-  constructor(client) {
+  constructor(server) {
+    this.server = server;
     this.rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
     });
     this.rl.on('line', m => {
-      if (m.startsWith('setowner')) {
-        const id = evt.replace(/setowner /g, '');
+      try {
+        return console.log(eval(m));
+      } catch (e) {
+        return console.error(e);
       }
     });
   }
