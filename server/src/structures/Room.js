@@ -30,9 +30,9 @@ class Room {
         visible: settings.visible != null ? settings.visible : true
       };
     }
-    settings.black = settings.lobby ? false : this._id.toLowerCase().includes('black');
+    this.settings.black = this.settings.lobby ? false : this._id.toLowerCase().includes('black');
     // eslint-disable-next-line no-extra-parens
-    settings.original = !settings.black ? (!settings.lobby ? this._id.toLowerCase().includes('original') : false) : false;
+    this.settings.original = !this.settings.black ? (!this.settings.lobby ? this._id.toLowerCase().includes('original') : false) : false;
     this.crown = null;
     this.ppl = [];
     this.chat = new Chat();
