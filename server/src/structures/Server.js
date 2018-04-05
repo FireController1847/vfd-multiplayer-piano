@@ -50,6 +50,12 @@ class Server extends WebSocket.Server {
     if (!['t', 'm', 'n'].includes(data.m)) console.log(data);
     if (data.m == 'hi') {
       const p = this.newParticipant(s);
+      s.sendObject({
+        m: 'nq',
+        allowance: 200,
+        max: 600,
+        histLen: 0
+      });
       return s.sendObject({
         m: 'hi',
         u: p.generateJSON(),
