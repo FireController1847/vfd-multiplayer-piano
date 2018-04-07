@@ -17,6 +17,8 @@ $(function() {
 
   var gMidiOutTest = (window.location.hash && window.location.hash.match(/^(?:#.+)*#midiout(?:#.+)*$/i)); // todo this is no longer needed
 
+  var random_colors = (window.location.hash && window.location.hash.match(/^(?:#.+)*#random(?:#.+)*$/i))
+
   if (!Array.prototype.indexOf) {
     Array.prototype.indexOf = function(elt /*, from*/ ) {
       var len = this.length >>> 0;
@@ -831,7 +833,7 @@ $(function() {
     key.timePlayed = Date.now();
     key.blips.push({
       "time": key.timePlayed,
-      "color": color
+      "color": (!random_colors ? color : '#' + Math.floor(Math.random() * 16777215).toString(16))
     });
   };
 
