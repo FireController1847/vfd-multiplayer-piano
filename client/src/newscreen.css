@@ -110,8 +110,13 @@ table { border: 0; padding: 0; margin: 0; }
 #play-alone-btn { position: absolute; left: 420px; top: 4px; }
 #room-settings-btn { position: absolute; left: 540px; top: 4px; display: none; }
 #midi-btn { position: absolute; left: 300px; top: 32px; }
-#record-btn { position: absolute; left: 420px; top: 32px; }
-#synth-btn { position: absolute; left: 540px; top: 32px; }
+/* Temporarily Disable Record & Synth Buttons */
+/* #record-btn { position: absolute; left: 420px; top: 32px; } */
+/* #synth-btn { position: absolute; left: 540px; top: 32px; } */
+#record-btn { position: absolute; left: 420px; top: 32px; background: rgba(170, 187, 170, 0.15); }
+#record-btn:hover { cursor: default; }
+#synth-btn { position: absolute; left: 540px; top: 32px; background: rgba(170, 187, 170, 0.15); }
+#synth-btn:hover { cursor: default; }
 
 #tooltip { position: absolute; pointer-events: none; background: #000; color: #fff; font-size: 10px; }
 .knob { cursor: pointer; }

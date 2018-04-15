@@ -375,7 +375,7 @@ $(function() {
 
 
   AudioEngineWeb = function() {
-    this.threshold = 1000;
+    this.threshold = 0;
     this.worker = new Worker("/piano/workerTimer.js");
     var self = this;
     this.worker.onmessage = function(event) {
@@ -1031,42 +1031,39 @@ $(function() {
     window.AudioContext = window.AudioContext || window.webkitAudioContext || undefined;
     var audio_engine = AudioEngineWeb;
 
-    this.audio = new audio_engine().init(function() {
-      for (var i = 0; i < Math.floor(piano.keysarray.length / 2); i++) {
-        (function() {
-          var key = piano.keys[piano.keysarray[i]];
-          piano.audio.load(key.note, gSoundPath + key.note + gSoundExt, function() {
-            console.log("audio load");
-            key.loaded = true;
-            key.timeLoaded = Date.now();
-            if (key.domElement) // todo: move this to renderer somehow
-              $(key.domElement).removeClass("loading");
-          });
-        })();
-      }
-    });
-
-    this.audio2 = new audio_engine().init(function() {
-      for (var i = Math.floor(piano.keysarray.length / 2); i < piano.keysarray.length; i++) {
-        (function() {
-          var key = piano.keys[piano.keysarray[i]];
-          piano.audio2.load(key.note, gSoundPath + key.note + gSoundExt, function() {
-            key.loaded = true;
-            key.timeLoaded = Date.now();
-            if (key.domElement) // todo: move this to renderer somehow
-              $(key.domElement).removeClass("loading");
-          });
-        })();
-      }
-    });
+    this.audioEngines = [];
+    function chunkify(e,f,i){if(f<2)return[e];var l,r=e.length,s=[],h=0;if(r%f==0)for(l=Math.floor(r/f);h<r;)s.push(e.slice(h,h+=l));else if(i)for(;h<r;)l=Math.ceil((r-h)/f--),s.push(e.slice(h,h+=l));else{for(f--,r%(l=Math.floor(r/f))==0&&l--;h<l*f;)s.push(e.slice(h,h+=l));s.push(e.slice(l*f))}return s}
+    this.chunks = chunkify(piano.keysarray, 6, true);
+    console.log(this.chunks);
+    for (let a = 0; a < this.chunks.length; a++) {
+      console.log("engine load");
+      (function() {
+        var engine = new audio_engine().init(function() {
+          for (let i = 0; i < piano.chunks[a].length; i++) {
+            (function() {
+              var key = piano.keys[piano.chunks[a][i]];
+              console.log(key.note)
+              engine.load(key.note, gSoundPath + key.note + gSoundExt, function() {
+                key.loaded = true;
+                key.timeLoaded = Date.now();
+                if (key.domElement) // todo: move this to renderer somehow
+                  $(key.domElement).removeClass("loading");
+              });
+            })();
+          }
+        });
+        piano.audioEngines.push(engine);
+      })();
+    }
   };
 
   Piano.prototype.play = function(note, vol, participant, delay_ms) {
     if (!this.keys.hasOwnProperty(note)) return;
     var key = this.keys[note];
     if (key.loaded) {
-      if (this.section1.includes(key.note)) this.audio2.play(key.note, vol, delay_ms, participant.id);
-      else this.audio.play(key.note, vol, delay_ms, participant.id);
+      for (let i = 0; i < this.audioEngines.length; i++) {
+        if (this.audioEngines[i].sounds.hasOwnProperty(key.note)) this.audioEngines[i].play(key.note, vol, delay_ms, participant.id);
+      }
     }
     if (typeof gMidiOutTest === "function") gMidiOutTest(key.note, vol * 100, delay_ms);
     var self = this;
@@ -1086,8 +1083,9 @@ $(function() {
     if (!this.keys.hasOwnProperty(note)) return;
     var key = this.keys[note];
     if (key.loaded) {
-      if (this.section1.includes(key.note)) this.audio2.stop(key.note, delay_ms, participant.id);
-      else this.audio.stop(key.note, delay_ms, participant.id);
+      for (let i = 0; i < this.audioEngines.length; i++) {
+        if (this.audioEngines[i].hasOwnProperty(key.note)) this.audioEngines[i].play(key.note, vol, delay_ms, participant.id);
+      }
     }
     if (typeof gMidiOutTest === "function") gMidiOutTest(key.note, 0, delay_ms);
   };
@@ -1596,11 +1594,12 @@ $(function() {
 
 
   var volume_slider = new VolumeSlider(document.getElementById("volume"), function(v) {
-    gPiano.audio.setVolume(v);
-    gPiano.audio2.setVolume(v);
+    for (let i = 0; i < gPiano.audioEngines.length; i++) {
+      gPiano.audioEngines[i].setVolume(v);
+    }
     if (window.localStorage) localStorage.volume = v;
   });
-  volume_slider.set(gPiano.audio.volume);
+  volume_slider.set(gPiano.audioEngines[0].volume);
 
   var Note = function(note, octave) {
     this.note = note;
@@ -2082,9 +2081,10 @@ $(function() {
 
     if (localStorage.volume) {
       volume_slider.set(localStorage.volume);
-      gPiano.audio.setVolume(localStorage.volume);
-      gPiano.audio2.setVolume(localStorage.volume);
-    } else localStorage.volume = gPiano.audio.volume;
+      for (let i = 0; i < gPiano.audioEngines.length; i++) {
+        gPiano.audioEngines[i].setVolume(localStorage.volume);
+      }
+    } else localStorage.volume = gPiano.audioEngines[0].volume;
 
     window.gHasBeenHereBefore = (localStorage.gHasBeenHereBefore || false);
     if (gHasBeenHereBefore) {}
@@ -2869,6 +2869,8 @@ $(function() {
   // record mp3
   (function() {
     var button = document.querySelector("#record-btn");
+    // DISABLE FOR NOW, READ EVENTS
+    return;
     var audio = MPP.piano.audio;
     var audio2 = MPP.piano.audio2;
     var context = audio.context;
@@ -2880,6 +2882,9 @@ $(function() {
     var recording_start_time = 0;
     var mp3_buffer = [];
     button.addEventListener("click", function(evt) {
+      // Disable button for now.
+      // TODO: Re-enable button.
+      return;
       if (!recording) {
         // start recording
         mp3_buffer = [];
@@ -2945,197 +2950,199 @@ $(function() {
 
 
 
-  // synth
+//   // synth
   var enableSynth = false;
-  var audio = gPiano.audio;
-  var context = gPiano.audio.context;
-  var synth_gain = context.createGain();
-  synth_gain.gain.value = 0.05;
-  synth_gain.connect(audio.synthGain);
+//   var audio = gPiano.audio;
+//   var context = gPiano.audio.context;
+//   var synth_gain = context.createGain();
+//   synth_gain.gain.value = 0.05;
+//   synth_gain.connect(audio.synthGain);
 
-  var osc_types = ["sine", "square", "sawtooth", "triangle"];
-  var osc_type_index = 1;
+//   var osc_types = ["sine", "square", "sawtooth", "triangle"];
+//   var osc_type_index = 1;
 
-  var osc1_type = "square";
-  var osc1_attack = 0;
-  var osc1_decay = 0.2;
-  var osc1_sustain = 0.5;
-  var osc1_release = 2.0;
+//   var osc1_type = "square";
+//   var osc1_attack = 0;
+//   var osc1_decay = 0.2;
+//   var osc1_sustain = 0.5;
+//   var osc1_release = 2.0;
 
-  function synthVoice(note_name, time) {
-    var note_number = MIDI_KEY_NAMES.indexOf(note_name);
-    note_number = note_number + 9 - MIDI_TRANSPOSE;
-    var freq = Math.pow(2, (note_number - 69) / 12) * 440.0;
-    this.osc = context.createOscillator();
-    this.osc.type = osc1_type;
-    this.osc.frequency.value = freq;
-    this.gain = context.createGain();
-    this.gain.gain.value = 0;
-    this.osc.connect(this.gain);
-    this.gain.connect(synth_gain);
-    this.osc.start(time);
-    this.gain.gain.setValueAtTime(0, time);
-    this.gain.gain.linearRampToValueAtTime(1, time + osc1_attack);
-    this.gain.gain.linearRampToValueAtTime(osc1_sustain, time + osc1_attack + osc1_decay);
-  }
+//   function synthVoice(note_name, time) {
+//     var note_number = MIDI_KEY_NAMES.indexOf(note_name);
+//     note_number = note_number + 9 - MIDI_TRANSPOSE;
+//     var freq = Math.pow(2, (note_number - 69) / 12) * 440.0;
+//     this.osc = context.createOscillator();
+//     this.osc.type = osc1_type;
+//     this.osc.frequency.value = freq;
+//     this.gain = context.createGain();
+//     this.gain.gain.value = 0;
+//     this.osc.connect(this.gain);
+//     this.gain.connect(synth_gain);
+//     this.osc.start(time);
+//     this.gain.gain.setValueAtTime(0, time);
+//     this.gain.gain.linearRampToValueAtTime(1, time + osc1_attack);
+//     this.gain.gain.linearRampToValueAtTime(osc1_sustain, time + osc1_attack + osc1_decay);
+//   }
 
-  synthVoice.prototype.stop = function(time) {
-    //this.gain.gain.setValueAtTime(osc1_sustain, time);
-    this.gain.gain.linearRampToValueAtTime(0, time + osc1_release);
-    this.osc.stop(time + osc1_release);
-  };
+//   synthVoice.prototype.stop = function(time) {
+//     //this.gain.gain.setValueAtTime(osc1_sustain, time);
+//     this.gain.gain.linearRampToValueAtTime(0, time + osc1_release);
+//     this.osc.stop(time + osc1_release);
+//   };
 
-  (function() {
-    var button = document.getElementById("synth-btn");
-    var notification;
+//   (function() {
+//     var button = document.getElementById("synth-btn");
+//     var notification;
 
-    button.addEventListener("click", function() {
-      if (notification) {
-        notification.close();
-      } else {
-        showSynth();
-      }
-    });
+//     button.addEventListener("click", function() {
+//       if (notification) {
+//         notification.close();
+//       } else {
+//         showSynth();
+//       }
+//     });
 
-    function showSynth() {
+//     function showSynth() {
 
-      var html = document.createElement("div");
+//       var html = document.createElement("div");
 
-      // on/off button
-      (function() {
-        var button = document.createElement("input");
-        mixin(button, {
-          type: "button",
-          value: "ON/OFF",
-          className: enableSynth ? "switched-on" : "switched-off"
-        });
-        button.addEventListener("click", function(evt) {
-          enableSynth = !enableSynth;
-          button.className = enableSynth ? "switched-on" : "switched-off";
-          if (!enableSynth) {
-            // stop all
-            for (var i in audio.playings) {
-              if (!audio.playings.hasOwnProperty(i)) continue;
-              var playing = audio.playings[i];
-              if (playing && playing.voice) {
-                playing.voice.osc.stop();
-                playing.voice = undefined;
-              }
-            }
-          }
-        });
-        html.appendChild(button);
-      })();
+//       // on/off button
+//       (function() {
+//         var button = document.createElement("input");
+//         mixin(button, {
+//           type: "button",
+//           value: "ON/OFF",
+//           className: enableSynth ? "switched-on" : "switched-off"
+//         });
+//         button.addEventListener("click", function(evt) {
+//           enableSynth = !enableSynth;
+//           button.className = enableSynth ? "switched-on" : "switched-off";
+//           if (!enableSynth) {
+//             // stop all
+//             for (var i in audio.playings) {
+//               if (!audio.playings.hasOwnProperty(i)) continue;
+//               var playing = audio.playings[i];
+//               if (playing && playing.voice) {
+//                 playing.voice.osc.stop();
+//                 playing.voice = undefined;
+//               }
+//             }
+//           }
+//         });
+//         html.appendChild(button);
+//       })();
 
-      // mix
-      var knob = document.createElement("canvas");
-      mixin(knob, {
-        width: 32,
-        height: 32,
-        className: "knob"
-      });
-      html.appendChild(knob);
-      knob = new Knob(knob, 0, 100, 0.1, 50, "mix", "%");
-      knob.on("change", function(k) {
-        var mix = k.value / 100;
-        audio.pianoGain.gain.value = 1 - mix;
-        audio.synthGain.gain.value = mix;
-      });
-      knob.emit("change", knob);
+//       // mix
+//       var knob = document.createElement("canvas");
+//       mixin(knob, {
+//         width: 32,
+//         height: 32,
+//         className: "knob"
+//       });
+//       html.appendChild(knob);
+//       knob = new Knob(knob, 0, 100, 0.1, 50, "mix", "%");
+//       knob.on("change", function(k) {
+//         var mix = k.value / 100;
+//         audio.pianoGain.gain.value = 1 - mix;
+//         audio.synthGain.gain.value = mix;
+//       });
+//       knob.emit("change", knob);
 
-      // osc1 type
-      (function() {
-        osc1_type = osc_types[osc_type_index];
-        var button = document.createElement("input");
-        mixin(button, {
-          type: "button",
-          value: osc_types[osc_type_index]
-        });
-        button.addEventListener("click", function(evt) {
-          if (++osc_type_index >= osc_types.length) osc_type_index = 0;
-          osc1_type = osc_types[osc_type_index];
-          button.value = osc1_type;
-        });
-        html.appendChild(button);
-      })();
+//       // osc1 type
+//       (function() {
+//         osc1_type = osc_types[osc_type_index];
+//         var button = document.createElement("input");
+//         mixin(button, {
+//           type: "button",
+//           value: osc_types[osc_type_index]
+//         });
+//         button.addEventListener("click", function(evt) {
+//           if (++osc_type_index >= osc_types.length) osc_type_index = 0;
+//           osc1_type = osc_types[osc_type_index];
+//           button.value = osc1_type;
+//         });
+//         html.appendChild(button);
+//       })();
 
-      // osc1 attack
-      var knob = document.createElement("canvas");
-      mixin(knob, {
-        width: 32,
-        height: 32,
-        className: "knob"
-      });
-      html.appendChild(knob);
-      knob = new Knob(knob, 0, 1, 0.001, osc1_attack, "osc1 attack", "s");
-      knob.on("change", function(k) {
-        osc1_attack = k.value;
-      });
-      knob.emit("change", knob);
+//       // osc1 attack
+//       var knob = document.createElement("canvas");
+//       mixin(knob, {
+//         width: 32,
+//         height: 32,
+//         className: "knob"
+//       });
+//       html.appendChild(knob);
+//       knob = new Knob(knob, 0, 1, 0.001, osc1_attack, "osc1 attack", "s");
+//       knob.on("change", function(k) {
+//         osc1_attack = k.value;
+//       });
+//       knob.emit("change", knob);
 
-      // osc1 decay
-      var knob = document.createElement("canvas");
-      mixin(knob, {
-        width: 32,
-        height: 32,
-        className: "knob"
-      });
-      html.appendChild(knob);
-      knob = new Knob(knob, 0, 2, 0.001, osc1_decay, "osc1 decay", "s");
-      knob.on("change", function(k) {
-        osc1_decay = k.value;
-      });
-      knob.emit("change", knob);
+//       // osc1 decay
+//       var knob = document.createElement("canvas");
+//       mixin(knob, {
+//         width: 32,
+//         height: 32,
+//         className: "knob"
+//       });
+//       html.appendChild(knob);
+//       knob = new Knob(knob, 0, 2, 0.001, osc1_decay, "osc1 decay", "s");
+//       knob.on("change", function(k) {
+//         osc1_decay = k.value;
+//       });
+//       knob.emit("change", knob);
 
-      var knob = document.createElement("canvas");
-      mixin(knob, {
-        width: 32,
-        height: 32,
-        className: "knob"
-      });
-      html.appendChild(knob);
-      knob = new Knob(knob, 0, 1, 0.001, osc1_sustain, "osc1 sustain", "x");
-      knob.on("change", function(k) {
-        osc1_sustain = k.value;
-      });
-      knob.emit("change", knob);
+//       var knob = document.createElement("canvas");
+//       mixin(knob, {
+//         width: 32,
+//         height: 32,
+//         className: "knob"
+//       });
+//       html.appendChild(knob);
+//       knob = new Knob(knob, 0, 1, 0.001, osc1_sustain, "osc1 sustain", "x");
+//       knob.on("change", function(k) {
+//         osc1_sustain = k.value;
+//       });
+//       knob.emit("change", knob);
 
-      // osc1 release
-      var knob = document.createElement("canvas");
-      mixin(knob, {
-        width: 32,
-        height: 32,
-        className: "knob"
-      });
-      html.appendChild(knob);
-      knob = new Knob(knob, 0, 2, 0.001, osc1_release, "osc1 release", "s");
-      knob.on("change", function(k) {
-        osc1_release = k.value;
-      });
-      knob.emit("change", knob);
-
-
-
-      var div = document.createElement("div");
-      div.innerHTML = "<br><br><br><br><center>this space intentionally left blank</center><br><br><br><br>";
-      html.appendChild(div);
+//       // osc1 release
+//       var knob = document.createElement("canvas");
+//       mixin(knob, {
+//         width: 32,
+//         height: 32,
+//         className: "knob"
+//       });
+//       html.appendChild(knob);
+//       knob = new Knob(knob, 0, 2, 0.001, osc1_release, "osc1 release", "s");
+//       knob.on("change", function(k) {
+//         osc1_release = k.value;
+//       });
+//       knob.emit("change", knob);
 
 
 
-      // notification
-      notification = new Notification({
-        title: "Synthesize",
-        html: html,
-        duration: -1,
-        target: "#synth-btn"
-      });
-      notification.on("close", function() {
-        var tip = document.getElementById("tooltip");
-        if (tip) tip.parentNode.removeChild(tip);
-        notification = null;
-      });
-    }
-  })();
+//       var div = document.createElement("div");
+//       div.innerHTML = "<br><br><br><br><center>this space intentionally left blank</center><br><br><br><br>";
+//       html.appendChild(div);
+
+
+
+//       // notification
+//       // Disable button for now.
+//       // TODO: Re-enable button.
+// //       notification = new Notification({
+// //         title: "Synthesize",
+// //         html: html,
+// //         duration: -1,
+// //         target: "#synth-btn"
+// //       });
+// //       notification.on("close", function() {
+// //         var tip = document.getElementById("tooltip");
+// //         if (tip) tip.parentNode.removeChild(tip);
+// //         notification = null;
+// //       });
+//     }
+//   })();
 
 
 
